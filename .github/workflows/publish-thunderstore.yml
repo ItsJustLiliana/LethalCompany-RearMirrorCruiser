@@ -1,0 +1,68 @@
+name: Publish To Thunderstore
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - deployment
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: thunderstore-publish-deployment
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout merged commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.ref }}
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Attempt build to produce DLL
+        continue-on-error: true
+        run: dotnet build RearMirrorCruiser.csproj -c Release
+
+      - name: Parse manifest metadata
+        id: manifest
+        shell: bash
+        run: |
+          echo "version=$(jq -r '.version_number' manifest.json)" >> "$GITHUB_OUTPUT"
+          echo "description=$(jq -r '.description' manifest.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Create Thunderstore zip package
+        shell: pwsh
+        run: ./scripts/package-thunderstore.ps1 -OutputZip artifacts/RearMirrorCruiser.zip
+
+      - name: Upload to Thunderstore
+        uses: GreenTF/upload-thunderstore-package@v4.3
+        with:
+          token: ${{ secrets.THUNDERSTORE_TOKEN }}
+          community: lethal-company
+          namespace: ItsJustLiliana
+          name: RearMirrorCruiser
+          version: ${{ steps.manifest.outputs.version }}
+          description: ${{ steps.manifest.outputs.description }}
+          file: artifacts/RearMirrorCruiser.zip
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ steps.manifest.outputs.version }}
+          name: Rear Mirror Cruiser
+          body: ""
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          artifacts: artifacts/RearMirrorCruiser.zip

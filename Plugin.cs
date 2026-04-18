@@ -37,28 +37,23 @@ public sealed class RearMirrorController : MonoBehaviour
     private ConfigEntry<float>? _rearCameraFps;
     private ConfigEntry<float>? _interiorCameraFps;
 
-    // Core values kept internal.
     private const int RenderWidth = 320;
     private const int RenderHeight = 180;
     private const float DefaultFeedOpacity = 0.95f;
     private const float DefaultRearCameraFieldOfView = 62f;
     private const float RearCameraFarClip = 60f;
 
-    // Rear camera values: edit these three numbers directly.
     private const float RearCameraBack = -3.9f;
     private const float RearCameraHeight = 2.2f;
     private const float RearCameraTilt = 18f;
 
-    // Interior camera values: edit these three numbers directly.
     private const float InteriorRearCameraBack = 0.65f;
     private const float InteriorRearCameraHeight = 1.55f;
     private const float InteriorRearCameraTilt = 22f;
 
-    // Default camera update rates.
     private const float DefaultRearCameraFps = 12f;
     private const float DefaultInteriorCameraFps = 8f;
 
-    // Right-side feed sizing.
     private const float InteriorFeedWidth = 230f;
     private const float InteriorFeedHeight = 98f;
     private const float InteriorFeedGap = 14f;
@@ -133,7 +128,6 @@ public sealed class RearMirrorController : MonoBehaviour
         {
             _lastDrivingTime = Time.unscaledTime;
 
-            // Only setup cameras if we switched vehicles
             if (_currentVehicleTransform != vehicleTransform)
             {
                 _currentVehicleTransform = vehicleTransform;
@@ -152,7 +146,6 @@ public sealed class RearMirrorController : MonoBehaviour
             }
             else
             {
-                // Handle runtime toggle changes without requiring vehicle switch.
                 if (rearEnabled && (_rearCameraObject == null || _rearCamera == null || _rearCameraObject.transform.parent != vehicleTransform))
                 {
                     EnsureRearCamera(vehicleTransform);
@@ -293,45 +286,14 @@ public sealed class RearMirrorController : MonoBehaviour
         rearObject.SetActive(true);
 
         _feedImage = rearObject.AddComponent<RawImage>();
-        _feedImage.raycastTarget = false;
-        _feedImage.color = new Color(1f, 1f, 1f, Mathf.Clamp01(_feedOpacity?.Value ?? DefaultFeedOpacity));
-
-        // Ensure RawImage has a material to render with
-        if (_feedImage.material == null)
-        {
-            _feedImage.material = new Material(Shader.Find("Unlit/Texture") ?? Shader.Find("UI/Default"));
-        }
-
-        var rearWidth = RearFeedWidth;
-        var rearHeight = RearFeedHeight;
-
-        var rearRect = _feedImage.rectTransform;
-        rearRect.anchorMin = new Vector2(0.5f, 1f);
-        rearRect.anchorMax = new Vector2(0.5f, 1f);
-        rearRect.pivot = new Vector2(0.5f, 1f);
-        rearRect.anchoredPosition = new Vector2(RearFeedPosX, FeedPosY);
-        rearRect.sizeDelta = new Vector2(rearWidth, rearHeight);
+        ConfigureFeedImage(_feedImage, RearFeedPosX, FeedPosY, RearFeedWidth, RearFeedHeight);
 
         var interiorObject = new GameObject("InteriorMirrorFeed");
         interiorObject.transform.SetParent(canvasObject.transform, false);
         interiorObject.SetActive(true);
 
         _interiorFeedImage = interiorObject.AddComponent<RawImage>();
-        _interiorFeedImage.raycastTarget = false;
-        _interiorFeedImage.color = new Color(1f, 1f, 1f, Mathf.Clamp01(_feedOpacity?.Value ?? DefaultFeedOpacity));
-
-        // Ensure RawImage has a material to render with
-        if (_interiorFeedImage.material == null)
-        {
-            _interiorFeedImage.material = new Material(Shader.Find("Unlit/Texture") ?? Shader.Find("UI/Default"));
-        }
-
-        var interiorRect = _interiorFeedImage.rectTransform;
-        interiorRect.anchorMin = new Vector2(0.5f, 1f);
-        interiorRect.anchorMax = new Vector2(0.5f, 1f);
-        interiorRect.pivot = new Vector2(0.5f, 1f);
-        interiorRect.anchoredPosition = new Vector2(InteriorFeedPosX, FeedPosY);
-        interiorRect.sizeDelta = new Vector2(InteriorFeedWidth, InteriorFeedHeight);
+        ConfigureFeedImage(_interiorFeedImage, InteriorFeedPosX, FeedPosY, InteriorFeedWidth, InteriorFeedHeight);
 
         _canvas.gameObject.SetActive(false);
     }
@@ -362,22 +324,8 @@ public sealed class RearMirrorController : MonoBehaviour
         _rearCameraObject.transform.localRotation = Quaternion.Euler(RearCameraTilt, 180f, 0f);
 
         EnsureRenderTextures();
+        ConfigureMirrorCamera(_rearCamera, _renderTexture, GetConfiguredRearFov());
 
-        if (_rearCamera != null)
-        {
-            _rearCamera.fieldOfView = GetConfiguredRearFov();
-            _rearCamera.farClipPlane = Mathf.Clamp(RearCameraFarClip, 10f, 200f);
-            _rearCamera.nearClipPlane = 0.1f;
-            _rearCamera.targetTexture = _renderTexture;
-            _rearCamera.depth = -100f;
-            _rearCamera.forceIntoRenderTexture = true;
-
-            // Don't restrict viewport - let camera render fully to texture
-            _rearCamera.rect = new Rect(0, 0, 1, 1);
-
-            var mainCamera = Camera.main;
-            _rearCamera.cullingMask = mainCamera != null ? mainCamera.cullingMask : ~0;
-        }
     }
 
     private void EnsureInteriorCamera(Transform vehicleTransform)
@@ -406,23 +354,7 @@ public sealed class RearMirrorController : MonoBehaviour
         _interiorCameraObject.transform.localRotation = Quaternion.Euler(InteriorRearCameraTilt, 180f, 0f);
 
         EnsureRenderTextures();
-
-        if (_interiorCamera != null)
-        {
-            var configuredFov = GetConfiguredRearFov();
-            _interiorCamera.fieldOfView = Mathf.Clamp(configuredFov - 6f, 35f, 110f);
-            _interiorCamera.farClipPlane = Mathf.Clamp(RearCameraFarClip, 10f, 200f);
-            _interiorCamera.nearClipPlane = 0.1f;
-            _interiorCamera.targetTexture = _interiorRenderTexture;
-            _interiorCamera.depth = -100f;
-            _interiorCamera.forceIntoRenderTexture = true;
-
-            // Don't restrict viewport - let camera render fully to texture
-            _interiorCamera.rect = new Rect(0, 0, 1, 1);
-
-            var mainCamera = Camera.main;
-            _interiorCamera.cullingMask = mainCamera != null ? mainCamera.cullingMask : ~0;
-        }
+        ConfigureMirrorCamera(_interiorCamera, _interiorRenderTexture, Mathf.Clamp(GetConfiguredRearFov() - 6f, 35f, 110f));
     }
 
     private void EnsureRenderTextures()
@@ -475,7 +407,6 @@ public sealed class RearMirrorController : MonoBehaviour
             _interiorRenderTexture.DiscardContents();
         }
 
-        // Assign textures to images (these should be set once)
         if (_feedImage != null && _feedImage.texture != _renderTexture)
         {
             _feedImage.texture = _renderTexture;
@@ -513,7 +444,6 @@ public sealed class RearMirrorController : MonoBehaviour
             _nextRearRenderAt = now;
             _nextInteriorRenderAt = now;
 
-            // Force an immediate render so the feed is not blank on the first visible frame.
             _forceRenderThisFrame = true;
         }
         else
@@ -1021,8 +951,44 @@ public sealed class RearMirrorController : MonoBehaviour
             return null;
         }
 
-        // Vehicle references can resolve to varying child transforms; use root for a stable parent.
         return vehicleTransform.root != null ? vehicleTransform.root : vehicleTransform;
+    }
+
+    private void ConfigureFeedImage(RawImage image, float posX, float posY, float width, float height)
+    {
+        image.raycastTarget = false;
+        image.color = new Color(1f, 1f, 1f, Mathf.Clamp01(_feedOpacity?.Value ?? DefaultFeedOpacity));
+
+        if (image.material == null)
+        {
+            image.material = new Material(Shader.Find("Unlit/Texture") ?? Shader.Find("UI/Default"));
+        }
+
+        var rect = image.rectTransform;
+        rect.anchorMin = new Vector2(0.5f, 1f);
+        rect.anchorMax = new Vector2(0.5f, 1f);
+        rect.pivot = new Vector2(0.5f, 1f);
+        rect.anchoredPosition = new Vector2(posX, posY);
+        rect.sizeDelta = new Vector2(width, height);
+    }
+
+    private static void ConfigureMirrorCamera(Camera? camera, RenderTexture? targetTexture, float fieldOfView)
+    {
+        if (camera == null)
+        {
+            return;
+        }
+
+        camera.fieldOfView = fieldOfView;
+        camera.farClipPlane = Mathf.Clamp(RearCameraFarClip, 10f, 200f);
+        camera.nearClipPlane = 0.1f;
+        camera.targetTexture = targetTexture;
+        camera.depth = -100f;
+        camera.forceIntoRenderTexture = true;
+        camera.rect = new Rect(0, 0, 1, 1);
+
+        var mainCamera = Camera.main;
+        camera.cullingMask = mainCamera != null ? mainCamera.cullingMask : ~0;
     }
 
     private sealed class DriverState

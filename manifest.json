@@ -1,0 +1,9 @@
+{
+    "name": "RearMirrorCruiser",
+    "version_number": "1.0.0",
+    "website_url": "https://github.com/ItsJustLiliana/LethalCompany-RearMirrorCruiser",
+    "description": "Live rear and inside-view camera feed of the cruiser when sitting in the driver seat",
+    "dependencies": [
+        "BepInEx-BepInExPack-5.4.2305"
+    ]
+}
