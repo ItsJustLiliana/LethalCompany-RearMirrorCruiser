@@ -13,7 +13,7 @@ public sealed class Plugin : BaseUnityPlugin
 {
     public const string PluginGuid = "itsjustliliana.rearmirrorcruiser";
     public const string PluginName = "Rear Mirror Cruiser";
-    public const string PluginVersion = "1.0.4";
+    public const string PluginVersion = "1.0.5";
 
     private void Awake()
     {
