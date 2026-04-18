@@ -43,7 +43,18 @@ if (-not (Test-Path -LiteralPath $outputDirectory)) {
     New-Item -ItemType Directory -Path $outputDirectory | Out-Null
 }
 
-$stagingDir = Join-Path $env:TEMP "rmc-thunderstore-package"
+$tempRoot = $env:RUNNER_TEMP
+if ([string]::IsNullOrWhiteSpace($tempRoot)) {
+    $tempRoot = $env:TEMP
+}
+if ([string]::IsNullOrWhiteSpace($tempRoot)) {
+    $tempRoot = [System.IO.Path]::GetTempPath()
+}
+if ([string]::IsNullOrWhiteSpace($tempRoot)) {
+    $tempRoot = "/tmp"
+}
+
+$stagingDir = Join-Path $tempRoot "rmc-thunderstore-package"
 if (Test-Path -LiteralPath $stagingDir) {
     Remove-Item -LiteralPath $stagingDir -Recurse -Force
 }
