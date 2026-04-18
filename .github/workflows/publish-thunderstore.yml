@@ -51,10 +51,15 @@ jobs:
         with:
           token: ${{ secrets.THUNDERSTORE_TOKEN }}
           community: lethal-company
+          repo: thunderstore.io
           namespace: ItsJustLiliana
           name: RearMirrorCruiser
           version: ${{ steps.manifest.outputs.version }}
           description: ${{ steps.manifest.outputs.description }}
+          categories: |
+            vehicles
+            clientside
+            bepinex
           file: artifacts/RearMirrorCruiser.zip
 
       - name: Create GitHub Release
