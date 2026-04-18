@@ -62,6 +62,14 @@ jobs:
             bepinex
           file: artifacts/RearMirrorCruiser.zip
 
+      - name: Recreate release zip artifact
+        shell: pwsh
+        run: ./scripts/package-thunderstore.ps1 -OutputZip artifacts/release/RearMirrorCruiser.zip
+
+      - name: Verify release artifact exists
+        shell: bash
+        run: test -f artifacts/release/RearMirrorCruiser.zip
+
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
@@ -70,4 +78,4 @@ jobs:
           body: ""
           allowUpdates: true
           artifactErrorsFailBuild: true
-          artifacts: artifacts/RearMirrorCruiser.zip
+          artifacts: artifacts/release/RearMirrorCruiser.zip
