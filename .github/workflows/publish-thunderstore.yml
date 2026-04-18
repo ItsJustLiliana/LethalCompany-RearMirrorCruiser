@@ -44,7 +44,9 @@ jobs:
 
       - name: Create Thunderstore zip package
         shell: pwsh
-        run: ./scripts/package-thunderstore.ps1 -OutputZip artifacts/RearMirrorCruiser.zip
+        run: |
+          $scriptPath = Join-Path $env:GITHUB_WORKSPACE "scripts/package-thunderstore.ps1"
+          & $scriptPath -OutputZip "artifacts/RearMirrorCruiser.zip"
 
       - name: Upload to Thunderstore
         uses: GreenTF/upload-thunderstore-package@v4.3
@@ -64,7 +66,9 @@ jobs:
 
       - name: Recreate release zip artifact
         shell: pwsh
-        run: ./scripts/package-thunderstore.ps1 -OutputZip artifacts/release/RearMirrorCruiser.zip
+        run: |
+          $scriptPath = Join-Path $env:GITHUB_WORKSPACE "scripts/package-thunderstore.ps1"
+          & $scriptPath -OutputZip "artifacts/release/RearMirrorCruiser.zip"
 
       - name: Verify release artifact exists
         shell: bash
