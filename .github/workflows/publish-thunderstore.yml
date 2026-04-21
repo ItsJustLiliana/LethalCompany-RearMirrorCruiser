@@ -95,7 +95,20 @@ jobs:
           }
           else {
             New-Item -ItemType Directory -Path "artifacts/release" -Force | Out-Null
-            Copy-Item -LiteralPath "artifacts/RearMirrorCruiser.zip" -Destination "artifacts/release/RearMirrorCruiser.zip" -Force
+            $dllPath = "bin/Release/netstandard2.1/RearMirrorCruiser.dll"
+            if (-not (Test-Path -LiteralPath $dllPath)) {
+              throw "RearMirrorCruiser.dll not found at $dllPath"
+            }
+            $stagingDir = Join-Path $env:RUNNER_TEMP "rmc-thunderstore-release-fallback"
+            if (Test-Path -LiteralPath $stagingDir) {
+              Remove-Item -LiteralPath $stagingDir -Recurse -Force
+            }
+            New-Item -ItemType Directory -Path $stagingDir | Out-Null
+            Copy-Item -LiteralPath "README.md" -Destination (Join-Path $stagingDir "README.md")
+            Copy-Item -LiteralPath "manifest.json" -Destination (Join-Path $stagingDir "manifest.json")
+            Copy-Item -LiteralPath "icon.png" -Destination (Join-Path $stagingDir "icon.png")
+            Copy-Item -LiteralPath $dllPath -Destination (Join-Path $stagingDir "RearMirrorCruiser.dll")
+            Compress-Archive -Path (Join-Path $stagingDir "*") -DestinationPath "artifacts/release/RearMirrorCruiser.zip" -Force
           }
 
       - name: Verify release artifact exists
