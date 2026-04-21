@@ -70,6 +70,8 @@ jobs:
           }
 
       - name: Upload to Thunderstore
+        id: thunderstore_upload
+        continue-on-error: true
         uses: GreenTF/upload-thunderstore-package@v4.3
         with:
           token: ${{ secrets.THUNDERSTORE_TOKEN }}
@@ -85,7 +87,18 @@ jobs:
             bepinex
           file: artifacts/RearMirrorCruiser.zip
 
+      - name: Log Thunderstore upload outcome
+        if: always()
+        shell: bash
+        run: |
+          echo "Thunderstore upload outcome: ${{ steps.thunderstore_upload.outcome }}"
+          echo "Thunderstore upload conclusion: ${{ steps.thunderstore_upload.conclusion }}"
+          if [ "${{ steps.thunderstore_upload.outcome }}" != "success" ]; then
+            echo "::warning::Thunderstore upload did not succeed. GitHub release will still be attempted."
+          fi
+
       - name: Recreate release zip artifact
+        if: always()
         shell: pwsh
         run: |
           Set-Location $env:GITHUB_WORKSPACE
@@ -112,10 +125,12 @@ jobs:
           }
 
       - name: Verify release artifact exists
+        if: always()
         shell: bash
         run: test -f artifacts/release/RearMirrorCruiser.zip
 
       - name: Create GitHub Release
+        if: always()
         uses: ncipollo/release-action@v1
         with:
           tag: v${{ steps.manifest.outputs.version }}
